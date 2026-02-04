@@ -14,13 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          last_login: string | null
+          login_streak: number
+          points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_login?: string | null
+          login_streak?: number
+          points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_login?: string | null
+          login_streak?: number
+          points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_task_points: {
+        Args: { p_task_type: string; p_user_id: string }
+        Returns: number
+      }
+      update_login_streak: {
+        Args: { p_user_id: string }
+        Returns: {
+          bonus_awarded: number
+          new_streak: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

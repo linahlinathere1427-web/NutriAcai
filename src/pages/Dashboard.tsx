@@ -1,23 +1,32 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Droplets, Footprints, Apple, Moon, Plus, Target } from "lucide-react";
+import { Droplets, Footprints, Apple, Moon, Plus, Target, Bot } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PointsDisplay } from "@/components/health/PointsDisplay";
 import { TaskCard } from "@/components/health/TaskCard";
 import { GoalCard } from "@/components/health/GoalCard";
+import { HealthAgentChat } from "@/components/health/HealthAgentChat";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const dailyTasks = [
-  { id: 1, title: "Drink 8 glasses of water", description: "Stay hydrated throughout the day", points: 50, icon: <Droplets className="h-6 w-6" /> },
-  { id: 2, title: "Walk 10,000 steps", description: "Get moving and stay active", points: 100, icon: <Footprints className="h-6 w-6" /> },
-  { id: 3, title: "Eat 5 servings of fruits/veggies", description: "Fuel your body with nutrients", points: 75, icon: <Apple className="h-6 w-6" /> },
-  { id: 4, title: "Sleep 7-9 hours", description: "Rest well for recovery", points: 80, icon: <Moon className="h-6 w-6" /> },
+  { id: 1, title: "Drink 8 glasses of water", description: "Stay hydrated throughout the day", points: 5, icon: <Droplets className="h-6 w-6" />, type: "daily" as const },
+  { id: 2, title: "Walk 10,000 steps", description: "Get moving and stay active", points: 5, icon: <Footprints className="h-6 w-6" />, type: "daily" as const },
+  { id: 3, title: "Eat 5 servings of fruits/veggies", description: "Fuel your body with nutrients", points: 5, icon: <Apple className="h-6 w-6" />, type: "daily" as const },
+  { id: 4, title: "Sleep 7-9 hours", description: "Rest well for recovery", points: 5, icon: <Moon className="h-6 w-6" />, type: "daily" as const },
 ];
 
 const weeklyTasks = [
-  { id: 5, title: "Complete 3 workout sessions", description: "Build strength and endurance", points: 200, icon: <Target className="h-6 w-6" /> },
-  { id: 6, title: "Cook 5 healthy meals at home", description: "Take control of your nutrition", points: 150, icon: <Apple className="h-6 w-6" /> },
+  { id: 5, title: "Complete 3 workout sessions", description: "Build strength and endurance", points: 10, icon: <Target className="h-6 w-6" />, type: "weekly" as const },
+  { id: 6, title: "Cook 5 healthy meals at home", description: "Take control of your nutrition", points: 10, icon: <Apple className="h-6 w-6" />, type: "weekly" as const },
+];
+
+const monthlyTasks = [
+  { id: 7, title: "Lose 2kg body weight", description: "Reach your weight goal", points: 15, icon: <Target className="h-6 w-6" />, type: "monthly" as const },
+  { id: 8, title: "Complete 90-day streak", description: "Stay consistent for 3 months", points: 100, icon: <Moon className="h-6 w-6" />, type: "monthly" as const },
 ];
 
 const goals = [
@@ -29,15 +38,28 @@ const goals = [
 
 export default function Dashboard() {
   const [completedTasks, setCompletedTasks] = useState<number[]>([]);
-  const [points, setPoints] = useState(1250);
+  const [showChat, setShowChat] = useState(false);
+  const { user } = useAuth();
+  const { points, streak, addTaskPoints } = useProfile();
 
-  const toggleTask = (taskId: number, taskPoints: number) => {
+  const toggleTask = async (taskId: number, taskType: "daily" | "weekly" | "monthly") => {
+    if (!user) {
+      toast.error("Please sign in to track your progress");
+      return;
+    }
+
     if (completedTasks.includes(taskId)) {
       setCompletedTasks(completedTasks.filter((id) => id !== taskId));
-      setPoints(points - taskPoints);
+      toast.info("Task unchecked");
     } else {
       setCompletedTasks([...completedTasks, taskId]);
-      setPoints(points + taskPoints);
+      
+      // Add points via backend
+      const newPoints = await addTaskPoints(taskType);
+      if (newPoints !== undefined) {
+        const pointsEarned = taskType === "daily" ? 5 : taskType === "weekly" ? 10 : 15;
+        toast.success(`+${pointsEarned} points earned! Total: ${newPoints}`);
+      }
     }
   };
 
@@ -56,8 +78,39 @@ export default function Dashboard() {
 
         {/* Points Display */}
         <div className="mb-6">
-          <PointsDisplay points={points} streak={7} />
+          <PointsDisplay points={points} streak={streak} />
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            💰 1000 pts = $1 discount on orders
+          </p>
         </div>
+
+        {/* Health Agent Chat Toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Button
+            onClick={() => setShowChat(!showChat)}
+            variant={showChat ? "default" : "outline"}
+            className="w-full h-14"
+          >
+            <Bot className="h-5 w-5 mr-2" />
+            {showChat ? "Hide Health Agent" : "Chat with My Health Agent"}
+          </Button>
+        </motion.div>
+
+        {/* Health Agent Chat */}
+        {showChat && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6"
+          >
+            <HealthAgentChat />
+          </motion.div>
+        )}
 
         {/* Goals Carousel */}
         <div className="mb-6">
@@ -80,9 +133,9 @@ export default function Dashboard() {
           <h2 className="font-display text-lg font-bold mb-4">Health Tasks</h2>
           <Tabs defaultValue="daily">
             <TabsList className="mb-4">
-              <TabsTrigger value="daily">Daily</TabsTrigger>
-              <TabsTrigger value="weekly">Weekly</TabsTrigger>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="daily">Daily (+5)</TabsTrigger>
+              <TabsTrigger value="weekly">Weekly (+10)</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly (+15)</TabsTrigger>
             </TabsList>
             
             <TabsContent value="daily" className="space-y-3">
@@ -94,7 +147,7 @@ export default function Dashboard() {
                   points={task.points}
                   icon={task.icon}
                   completed={completedTasks.includes(task.id)}
-                  onComplete={() => toggleTask(task.id, task.points)}
+                  onComplete={() => toggleTask(task.id, task.type)}
                 />
               ))}
             </TabsContent>
@@ -108,16 +161,23 @@ export default function Dashboard() {
                   points={task.points}
                   icon={task.icon}
                   completed={completedTasks.includes(task.id)}
-                  onComplete={() => toggleTask(task.id, task.points)}
+                  onComplete={() => toggleTask(task.id, task.type)}
                 />
               ))}
             </TabsContent>
 
             <TabsContent value="monthly" className="space-y-3">
-              <div className="text-center py-12 text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Monthly challenges coming soon!</p>
-              </div>
+              {monthlyTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  description={task.description}
+                  points={task.points}
+                  icon={task.icon}
+                  completed={completedTasks.includes(task.id)}
+                  onComplete={() => toggleTask(task.id, task.type)}
+                />
+              ))}
             </TabsContent>
           </Tabs>
         </div>

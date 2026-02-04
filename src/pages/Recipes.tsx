@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { Search, Filter, Clock, Flame } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RecipeCard } from "@/components/recipes/RecipeCard";
+import { KitchenSearch } from "@/components/recipes/KitchenSearch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const categories = ["All", "Breakfast", "Lunch", "Dinner", "Snacks", "Smoothies"];
 
@@ -96,65 +98,79 @@ export default function Recipes() {
           <p className="text-muted-foreground">Healthy & delicious meals for you</p>
         </motion.div>
 
-        {/* Search */}
-        <div className="flex gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search recipes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12"
-            />
-          </div>
-          <Button variant="outline" size="icon" className="h-12 w-12">
-            <Filter className="h-5 w-5" />
-          </Button>
-        </div>
+        {/* Tabs for Kitchen Search vs Browse */}
+        <Tabs defaultValue="kitchen" className="mb-6">
+          <TabsList className="w-full">
+            <TabsTrigger value="kitchen" className="flex-1">🍳 Kitchen Search</TabsTrigger>
+            <TabsTrigger value="browse" className="flex-1">📖 Browse Recipes</TabsTrigger>
+          </TabsList>
 
-        {/* Quick Stats */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2">
-            <Clock className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Quick (under 15 min)</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2">
-            <Flame className="h-4 w-4 text-accent" />
-            <span className="text-sm font-medium">Low Cal</span>
-          </div>
-        </div>
+          <TabsContent value="kitchen" className="mt-6">
+            <KitchenSearch />
+          </TabsContent>
 
-        {/* Categories */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 -mx-5 px-5 scrollbar-hide">
-          {categories.map((category) => (
-            <Badge
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              className="cursor-pointer whitespace-nowrap px-4 py-2 text-sm"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category}
-            </Badge>
-          ))}
-        </div>
+          <TabsContent value="browse" className="mt-6">
+            {/* Search */}
+            <div className="flex gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search recipes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-12"
+                />
+              </div>
+              <Button variant="outline" size="icon" className="h-12 w-12">
+                <Filter className="h-5 w-5" />
+              </Button>
+            </div>
 
-        {/* Recipe Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredRecipes.map((recipe, index) => (
-            <motion.div
-              key={recipe.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <RecipeCard
-                {...recipe}
-                isFavorite={favorites.includes(recipe.id)}
-                onToggleFavorite={() => toggleFavorite(recipe.id)}
-              />
-            </motion.div>
-          ))}
-        </div>
+            {/* Quick Stats */}
+            <div className="flex gap-4 mb-6">
+              <div className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Quick (under 15 min)</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-muted px-4 py-2">
+                <Flame className="h-4 w-4 text-accent" />
+                <span className="text-sm font-medium">Low Cal</span>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-6 -mx-5 px-5 scrollbar-hide">
+              {categories.map((category) => (
+                <Badge
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  className="cursor-pointer whitespace-nowrap px-4 py-2 text-sm"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Recipe Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filteredRecipes.map((recipe, index) => (
+                <motion.div
+                  key={recipe.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <RecipeCard
+                    {...recipe}
+                    isFavorite={favorites.includes(recipe.id)}
+                    onToggleFavorite={() => toggleFavorite(recipe.id)}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
