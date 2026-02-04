@@ -11,6 +11,7 @@ import Recipes from "./pages/Recipes";
 import Order from "./pages/Order";
 import Profile from "./pages/Profile";
 import Payment from "./pages/Payment";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/order" element={<Order />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/payment" element={<Payment />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/faq" element={<FAQ />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CreditCard, Plus, Check, ShieldCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, CreditCard, Plus, Check, ShieldCheck, Gift, Loader2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NutriCard } from "@/components/ui/card-nutriacai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface PaymentMethod {
   id: number;
@@ -28,6 +33,17 @@ export default function Payment() {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [name, setName] = useState("");
+  const [orderAmount, setOrderAmount] = useState(2500); // $25.00 in cents
+  const [redeemPoints, setRedeemPoints] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const { user } = useAuth();
+  const { points } = useProfile();
+  
+  // Calculate discount
+  const maxPointsToRedeem = Math.min(points, Math.floor(orderAmount / 100) * 1000);
+  const discountAmount = redeemPoints ? Math.floor(maxPointsToRedeem / 1000) * 100 : 0;
+  const finalAmount = Math.max(orderAmount - discountAmount, 50);
 
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
@@ -46,6 +62,38 @@ export default function Payment() {
       return v.substring(0, 2) + "/" + v.substring(2, 4);
     }
     return v;
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast.error("Please sign in to checkout");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-payment", {
+        body: {
+          amount: orderAmount,
+          redeemPoints: redeemPoints,
+          pointsToRedeem: redeemPoints ? maxPointsToRedeem : 0,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.url) {
+        // Open Stripe checkout in a new tab
+        window.open(data.url, "_blank");
+        toast.success("Redirecting to checkout...");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Failed to create checkout session. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -74,10 +122,102 @@ export default function Payment() {
           <div className="flex items-center gap-3 rounded-xl bg-mint-light/50 border border-secondary/30 p-4">
             <ShieldCheck className="h-6 w-6 text-secondary" />
             <div>
-              <p className="font-semibold text-sm">Secure Payments</p>
+              <p className="font-semibold text-sm">Secure Payments via Stripe</p>
               <p className="text-xs text-muted-foreground">Your data is encrypted and protected</p>
             </div>
           </div>
+        </motion.div>
+
+        {/* Points Redemption Card */}
+        {user && points > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <NutriCard variant="gradient" className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                    <Gift className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Redeem Points</p>
+                    <p className="text-sm opacity-80">You have {points} points</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={redeemPoints}
+                  onCheckedChange={setRedeemPoints}
+                />
+              </div>
+              {redeemPoints && (
+                <div className="mt-3 pt-3 border-t border-primary-foreground/20">
+                  <div className="flex justify-between text-sm">
+                    <span>Points to redeem:</span>
+                    <span className="font-semibold">{maxPointsToRedeem} pts</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span>Discount:</span>
+                    <span className="font-semibold text-secondary">-${(discountAmount / 100).toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs opacity-70 mt-2">1000 pts = $1 discount</p>
+                </div>
+              )}
+            </NutriCard>
+          </motion.div>
+        )}
+
+        {/* Order Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <NutriCard variant="elevated" className="p-4">
+            <h3 className="font-display font-bold mb-4">Order Summary</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>${(orderAmount / 100).toFixed(2)}</span>
+              </div>
+              {redeemPoints && discountAmount > 0 && (
+                <div className="flex justify-between text-secondary">
+                  <span>Points Discount</span>
+                  <span>-${(discountAmount / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>${(finalAmount / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              className="w-full mt-4"
+              variant="hero"
+              onClick={handleCheckout}
+              disabled={isProcessing || !user}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Checkout with Stripe
+                </>
+              )}
+            </Button>
+            {!user && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Please <Link to="/auth" className="text-primary underline">sign in</Link> to checkout
+              </p>
+            )}
+          </NutriCard>
         </motion.div>
 
         {/* Saved Payment Methods */}
