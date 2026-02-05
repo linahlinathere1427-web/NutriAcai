@@ -27,7 +27,7 @@ export function KitchenSearch() {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("recipe-agent", {
-        body: { ingredients: ingredients },
+        body: { ingredients: ingredients, action: "search" },
       });
 
       if (fnError) throw fnError;
