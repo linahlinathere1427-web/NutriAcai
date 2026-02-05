@@ -63,7 +63,7 @@ export default function Dashboard() {
       if (newPoints !== undefined) {
         const pointsEarned = taskType === "daily" ? 5 : taskType === "weekly" ? 10 : 15;
         toast.success(`+${pointsEarned} points earned! Total: ${newPoints}`);
-        refetchProfile();
+        fetchProfile();
       }
     }
   };
