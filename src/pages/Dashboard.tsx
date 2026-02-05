@@ -82,7 +82,14 @@ export default function Dashboard() {
   };
 
   // Combine user goals with default goals if user has no goals
-  const displayGoals = user && goals.length > 0
+  const displayGoals: Array<{
+    id?: string;
+    title: string;
+    target: number;
+    current: number;
+    unit: string;
+    period: "daily" | "weekly" | "monthly";
+  }> = user && goals.length > 0
     ? goals.map((g) => ({
         id: g.id,
         title: g.title,
