@@ -110,6 +110,7 @@ export function useProfile() {
     profile,
     isLoading,
     fetchProfile,
+    refetchProfile: fetchProfile,
     updateStreak,
     addTaskPoints,
     deductPoints,

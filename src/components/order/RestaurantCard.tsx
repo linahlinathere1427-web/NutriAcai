@@ -1,7 +1,16 @@
 import { motion } from "framer-motion";
-import { Star, Clock, MapPin } from "lucide-react";
+import { Star, Clock, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 import { NutriCard } from "@/components/ui/card-nutriacai";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+interface MenuItem {
+  name: string;
+  price: number;
+  description?: string;
+  calories?: number;
+}
 
 interface RestaurantCardProps {
   name: string;
@@ -12,6 +21,7 @@ interface RestaurantCardProps {
   cuisine: string[];
   priceRange: "$" | "$$" | "$$$";
   isOpen?: boolean;
+  menu?: MenuItem[];
 }
 
 export function RestaurantCard({
@@ -23,7 +33,10 @@ export function RestaurantCard({
   cuisine,
   priceRange,
   isOpen = true,
+  menu = [],
 }: RestaurantCardProps) {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -61,7 +74,7 @@ export function RestaurantCard({
               </Badge>
             ))}
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               <span>{deliveryTime}</span>
@@ -71,6 +84,47 @@ export function RestaurantCard({
               <span>{distance}</span>
             </div>
           </div>
+
+          {/* Menu Section */}
+          {menu.length > 0 && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(!showMenu);
+                }}
+              >
+                <span className="font-semibold">View Menu ({menu.length} items)</span>
+                {showMenu ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+              
+              {showMenu && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="mt-3 space-y-2 border-t pt-3"
+                >
+                  {menu.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start gap-2 p-2 rounded-lg bg-muted/50">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                        )}
+                        {item.calories && (
+                          <p className="text-xs text-muted-foreground">{item.calories} kcal</p>
+                        )}
+                      </div>
+                      <span className="font-semibold text-primary">AED {item.price}</span>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </>
+          )}
         </div>
       </NutriCard>
     </motion.div>

@@ -11,41 +11,72 @@ serve(async (req) => {
   }
 
   try {
-    const { message } = await req.json();
+    const { messages } = await req.json();
     
-    const AIRIA_API_KEY = Deno.env.get("AIRIA_API_KEY");
-    if (!AIRIA_API_KEY) {
-      throw new Error("AIRIA_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("[HEALTH-AGENT] Sending message to AIRIA:", message);
+    console.log("[HEALTH-AGENT] Processing chat with Lovable AI");
 
-    const response = await fetch(
-      "https://api.airia.ai/v2/PipelineExecution/5006d97b-9279-421d-a686-207cb7539b91",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": AIRIA_API_KEY,
-        },
-        body: JSON.stringify({
-          input: message,
-        }),
-      }
-    );
+    const systemPrompt = `You are NutriAcai's Health Agent - a friendly, knowledgeable wellness coach specializing in nutrition, fitness, and healthy lifestyle guidance.
+
+Your expertise includes:
+- Personalized nutrition advice and meal planning
+- Exercise recommendations for all fitness levels
+- Weight management strategies
+- Healthy habit formation
+- Sleep optimization
+- Stress management techniques
+- Understanding of Dubai's health and wellness scene
+
+Guidelines:
+- Be encouraging, supportive, and non-judgmental
+- Provide practical, actionable advice
+- Consider cultural dietary preferences (halal options, regional cuisine)
+- Recommend NutriAcai features when relevant (recipes, healthy ordering, point rewards)
+- Keep responses concise but informative
+- Always encourage consulting healthcare professionals for medical concerns
+
+Remember: You're helping users on their wellness journey, celebrating their progress, and motivating them toward healthier choices.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        stream: true,
+      }),
+    });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI service unavailable. Please try again later." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const errorText = await response.text();
-      console.error("[HEALTH-AGENT] AIRIA API error:", response.status, errorText);
-      throw new Error(`AIRIA API error: ${response.status}`);
+      console.error("[HEALTH-AGENT] Lovable AI error:", response.status, errorText);
+      throw new Error(`AI API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log("[HEALTH-AGENT] AIRIA response received");
-
-    return new Response(JSON.stringify({ response: data.result || data.output || data }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
     console.error("[HEALTH-AGENT] Error:", error);

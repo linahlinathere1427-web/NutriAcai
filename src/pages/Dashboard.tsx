@@ -6,9 +6,11 @@ import { PointsDisplay } from "@/components/health/PointsDisplay";
 import { TaskCard } from "@/components/health/TaskCard";
 import { GoalCard } from "@/components/health/GoalCard";
 import { HealthAgentChat } from "@/components/health/HealthAgentChat";
+import { AddGoalDialog } from "@/components/health/AddGoalDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
+import { useGoals } from "@/hooks/useGoals";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -29,7 +31,7 @@ const monthlyTasks = [
   { id: 8, title: "Complete 90-day streak", description: "Stay consistent for 3 months", points: 100, icon: <Moon className="h-6 w-6" />, type: "monthly" as const },
 ];
 
-const goals = [
+const defaultGoals = [
   { title: "Water Intake", target: 8, current: 5, unit: "glasses", period: "daily" as const },
   { title: "Steps", target: 10000, current: 7234, unit: "steps", period: "daily" as const },
   { title: "Workouts", target: 3, current: 2, unit: "sessions", period: "weekly" as const },
@@ -39,8 +41,10 @@ const goals = [
 export default function Dashboard() {
   const [completedTasks, setCompletedTasks] = useState<number[]>([]);
   const [showChat, setShowChat] = useState(false);
+  const [showAddGoal, setShowAddGoal] = useState(false);
   const { user } = useAuth();
-  const { points, streak, addTaskPoints } = useProfile();
+  const { points, streak, addTaskPoints, fetchProfile } = useProfile();
+  const { goals, fetchGoals, updateGoalProgress, deleteGoal } = useGoals();
 
   const toggleTask = async (taskId: number, taskType: "daily" | "weekly" | "monthly") => {
     if (!user) {
@@ -59,9 +63,42 @@ export default function Dashboard() {
       if (newPoints !== undefined) {
         const pointsEarned = taskType === "daily" ? 5 : taskType === "weekly" ? 10 : 15;
         toast.success(`+${pointsEarned} points earned! Total: ${newPoints}`);
+        fetchProfile();
       }
     }
   };
+
+  const handleGoalIncrement = async (goalId: string) => {
+    const goal = goals.find((g) => g.id === goalId);
+    if (goal) {
+      await updateGoalProgress(goalId, (goal.current_value || 0) + 1);
+      toast.success(`Progress updated for ${goal.title}`);
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    await deleteGoal(goalId);
+    toast.success("Goal deleted");
+  };
+
+  // Combine user goals with default goals if user has no goals
+  const displayGoals: Array<{
+    id?: string;
+    title: string;
+    target: number;
+    current: number;
+    unit: string;
+    period: "daily" | "weekly" | "monthly";
+  }> = user && goals.length > 0
+    ? goals.map((g) => ({
+        id: g.id,
+        title: g.title,
+        target: g.target_value || 0,
+        current: g.current_value || 0,
+        unit: g.unit || "",
+        period: g.period,
+      }))
+    : defaultGoals;
 
   return (
     <AppLayout>
@@ -116,14 +153,24 @@ export default function Dashboard() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-lg font-bold">Your Goals</h2>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => setShowAddGoal(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add Goal
             </Button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-            {goals.map((goal) => (
-              <GoalCard key={goal.title} {...goal} />
+            {displayGoals.map((goal, index) => (
+              <GoalCard 
+                key={goal.id || `default-${index}`}
+                id={goal.id}
+                title={goal.title}
+                target={goal.target}
+                current={goal.current}
+                unit={goal.unit}
+                period={goal.period}
+                onDelete={goal.id ? handleDeleteGoal : undefined}
+                onIncrement={goal.id ? handleGoalIncrement : undefined}
+              />
             ))}
           </div>
         </div>
@@ -181,6 +228,13 @@ export default function Dashboard() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Add Goal Dialog */}
+        <AddGoalDialog
+          open={showAddGoal}
+          onOpenChange={setShowAddGoal}
+          onGoalAdded={fetchGoals}
+        />
       </div>
     </AppLayout>
   );
