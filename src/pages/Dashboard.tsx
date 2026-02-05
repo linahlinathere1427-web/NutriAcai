@@ -43,7 +43,7 @@ export default function Dashboard() {
   const [showChat, setShowChat] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const { user } = useAuth();
-  const { points, streak, addTaskPoints, refetchProfile } = useProfile();
+  const { points, streak, addTaskPoints, fetchProfile } = useProfile();
   const { goals, fetchGoals, updateGoalProgress, deleteGoal } = useGoals();
 
   const toggleTask = async (taskId: number, taskType: "daily" | "weekly" | "monthly") => {
