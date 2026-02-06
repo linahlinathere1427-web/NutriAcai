@@ -247,7 +247,7 @@ export default function Checkout() {
               <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="paypal" id="paypal" />
                 <Label htmlFor="paypal" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <span className="text-xl font-bold text-blue-600">P</span>
+                  <span className="text-xl font-bold text-primary">P</span>
                   <div>
                     <p className="font-medium">PayPal</p>
                     <p className="text-xs text-muted-foreground">Pay with your PayPal account</p>
