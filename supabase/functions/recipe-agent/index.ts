@@ -31,11 +31,12 @@ Your specialties:
 
 When generating recipes:
 1. Start with the recipe name and a brief description
-2. List all ingredients with quantities
-3. Include prep time, cook time, and servings
-4. Provide clear, numbered cooking steps
-5. Add nutritional estimates (calories, protein, carbs, fat)
-6. Include helpful tips or variations
+2. **IMPORTANT: Include a relevant image URL for the dish** - use format: ![Recipe Name](https://images.unsplash.com/photo-XXXXXXX?w=800&h=600&fit=crop) - choose an appropriate food photo ID from Unsplash
+3. List all ingredients with quantities
+4. Include prep time, cook time, and servings
+5. Provide clear, numbered cooking steps
+6. Add nutritional estimates (calories, protein, carbs, fat)
+7. Include helpful tips or variations
 
 Focus on:
 - Healthy, whole-food ingredients
@@ -44,11 +45,11 @@ Focus on:
 - Fresh, flavorful combinations
 - Middle Eastern and Mediterranean influences when appropriate
 
-Format your response in clear markdown with headers for each section.`;
+Format your response in clear markdown with headers for each section. Always include an image!`;
 
     const userPrompt = action === "search" 
-      ? `Search online and find real recipes that include these ingredients: ${ingredients}. Provide 2-3 actual recipes with full details, citing any sources if applicable.`
-      : `Create a healthy, delicious recipe using these ingredients: ${ingredients}. Be creative but practical, and ensure the recipe is nutritious.`;
+      ? `Search online and find real recipes that include these ingredients: ${ingredients}. Provide 2-3 actual recipes with full details including an image for each. Format with markdown headers and include all nutritional info.`
+      : `Create a healthy, delicious recipe using these ingredients: ${ingredients}. Be creative but practical, and ensure the recipe is nutritious. Include an image!`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
