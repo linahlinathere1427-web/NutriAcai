@@ -77,6 +77,13 @@ function getDateSeed(type: "daily" | "weekly" | "monthly"): number {
   }
 }
 
+const defaultGoals = [
+  { title: "Water Intake", target: 8, current: 5, unit: "glasses", period: "daily" as const },
+  { title: "Steps", target: 10000, current: 7234, unit: "steps", period: "daily" as const },
+  { title: "Workouts", target: 3, current: 2, unit: "sessions", period: "weekly" as const },
+  { title: "Weight Goal", target: 5, current: 3.2, unit: "kg lost", period: "monthly" as const },
+];
+
 export default function Dashboard() {
   const [completedTasks, setCompletedTasks] = useState<number[]>([]);
   const [showChat, setShowChat] = useState(false);
@@ -84,6 +91,22 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { points, streak, addTaskPoints, fetchProfile } = useProfile();
   const { goals, fetchGoals, updateGoalProgress, deleteGoal } = useGoals();
+
+  // Shuffle tasks based on date
+  const dailyTasks = useMemo(() => {
+    const seed = getDateSeed("daily");
+    return seededShuffle(allDailyTasks, seed).slice(0, 4).map(t => ({ ...t, type: "daily" as const }));
+  }, []);
+
+  const weeklyTasks = useMemo(() => {
+    const seed = getDateSeed("weekly");
+    return seededShuffle(allWeeklyTasks, seed).slice(0, 3).map(t => ({ ...t, type: "weekly" as const }));
+  }, []);
+
+  const monthlyTasks = useMemo(() => {
+    const seed = getDateSeed("monthly");
+    return seededShuffle(allMonthlyTasks, seed).slice(0, 3).map(t => ({ ...t, type: "monthly" as const }));
+  }, []);
 
   const toggleTask = async (taskId: number, taskType: "daily" | "weekly" | "monthly") => {
     if (!user) {
