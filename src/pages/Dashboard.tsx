@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Droplets, Footprints, Apple, Moon, Plus, Target, Bot } from "lucide-react";
+import { Droplets, Footprints, Apple, Moon, Plus, Target, Bot, Dumbbell, Salad, BedDouble, Heart, Brain } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PointsDisplay } from "@/components/health/PointsDisplay";
 import { TaskCard } from "@/components/health/TaskCard";
@@ -14,22 +14,68 @@ import { useGoals } from "@/hooks/useGoals";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const dailyTasks = [
-  { id: 1, title: "Drink 8 glasses of water", description: "Stay hydrated throughout the day", points: 5, icon: <Droplets className="h-6 w-6" />, type: "daily" as const },
-  { id: 2, title: "Walk 10,000 steps", description: "Get moving and stay active", points: 5, icon: <Footprints className="h-6 w-6" />, type: "daily" as const },
-  { id: 3, title: "Eat 5 servings of fruits/veggies", description: "Fuel your body with nutrients", points: 5, icon: <Apple className="h-6 w-6" />, type: "daily" as const },
-  { id: 4, title: "Sleep 7-9 hours", description: "Rest well for recovery", points: 5, icon: <Moon className="h-6 w-6" />, type: "daily" as const },
+// All available tasks for shuffling
+const allDailyTasks = [
+  { id: 1, title: "Drink 8 glasses of water", description: "Stay hydrated throughout the day", points: 5, icon: <Droplets className="h-6 w-6" /> },
+  { id: 2, title: "Walk 10,000 steps", description: "Get moving and stay active", points: 5, icon: <Footprints className="h-6 w-6" /> },
+  { id: 3, title: "Eat 5 servings of fruits/veggies", description: "Fuel your body with nutrients", points: 5, icon: <Apple className="h-6 w-6" /> },
+  { id: 4, title: "Sleep 7-9 hours", description: "Rest well for recovery", points: 5, icon: <Moon className="h-6 w-6" /> },
+  { id: 5, title: "Do 20 minutes of meditation", description: "Calm your mind", points: 5, icon: <Brain className="h-6 w-6" /> },
+  { id: 6, title: "Take a 30-minute walk", description: "Fresh air and exercise", points: 5, icon: <Footprints className="h-6 w-6" /> },
+  { id: 7, title: "Eat a healthy breakfast", description: "Start your day right", points: 5, icon: <Salad className="h-6 w-6" /> },
+  { id: 8, title: "Stretch for 10 minutes", description: "Keep your body flexible", points: 5, icon: <Heart className="h-6 w-6" /> },
 ];
 
-const weeklyTasks = [
-  { id: 5, title: "Complete 3 workout sessions", description: "Build strength and endurance", points: 10, icon: <Target className="h-6 w-6" />, type: "weekly" as const },
-  { id: 6, title: "Cook 5 healthy meals at home", description: "Take control of your nutrition", points: 10, icon: <Apple className="h-6 w-6" />, type: "weekly" as const },
+const allWeeklyTasks = [
+  { id: 9, title: "Complete 3 workout sessions", description: "Build strength and endurance", points: 10, icon: <Target className="h-6 w-6" /> },
+  { id: 10, title: "Cook 5 healthy meals at home", description: "Take control of your nutrition", points: 10, icon: <Apple className="h-6 w-6" /> },
+  { id: 11, title: "Try a new healthy recipe", description: "Expand your cooking skills", points: 10, icon: <Salad className="h-6 w-6" /> },
+  { id: 12, title: "Get 7+ hours sleep every night", description: "Prioritize your rest", points: 10, icon: <BedDouble className="h-6 w-6" /> },
+  { id: 13, title: "Do yoga 3 times", description: "Improve flexibility and mindfulness", points: 10, icon: <Heart className="h-6 w-6" /> },
+  { id: 14, title: "Hit 50,000 total steps", description: "Stay active all week", points: 10, icon: <Footprints className="h-6 w-6" /> },
 ];
 
-const monthlyTasks = [
-  { id: 7, title: "Lose 2kg body weight", description: "Reach your weight goal", points: 15, icon: <Target className="h-6 w-6" />, type: "monthly" as const },
-  { id: 8, title: "Complete 90-day streak", description: "Stay consistent for 3 months", points: 100, icon: <Moon className="h-6 w-6" />, type: "monthly" as const },
+const allMonthlyTasks = [
+  { id: 15, title: "Lose 2kg body weight", description: "Reach your weight goal", points: 15, icon: <Target className="h-6 w-6" /> },
+  { id: 16, title: "Complete 90-day streak", description: "Stay consistent for 3 months", points: 100, icon: <Moon className="h-6 w-6" /> },
+  { id: 17, title: "Complete 12 workouts", description: "Average 3 per week", points: 15, icon: <Dumbbell className="h-6 w-6" /> },
+  { id: 18, title: "Drink 240 glasses of water", description: "Stay hydrated all month", points: 15, icon: <Droplets className="h-6 w-6" /> },
+  { id: 19, title: "Walk 300,000 steps", description: "10k steps daily average", points: 15, icon: <Footprints className="h-6 w-6" /> },
 ];
+
+// Fisher-Yates shuffle with seed
+function seededShuffle<T>(array: T[], seed: number): T[] {
+  const shuffled = [...array];
+  let currentIndex = shuffled.length;
+  
+  // Simple seedable random
+  const seededRandom = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+  
+  while (currentIndex !== 0) {
+    const randomIndex = Math.floor(seededRandom() * currentIndex);
+    currentIndex--;
+    [shuffled[currentIndex], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[currentIndex]];
+  }
+  
+  return shuffled;
+}
+
+// Get seed based on date (daily, weekly, monthly)
+function getDateSeed(type: "daily" | "weekly" | "monthly"): number {
+  const now = new Date();
+  if (type === "daily") {
+    return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  } else if (type === "weekly") {
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil((((now.getTime() - startOfYear.getTime()) / 86400000) + startOfYear.getDay() + 1) / 7);
+    return now.getFullYear() * 100 + weekNumber;
+  } else {
+    return now.getFullYear() * 100 + (now.getMonth() + 1);
+  }
+}
 
 const defaultGoals = [
   { title: "Water Intake", target: 8, current: 5, unit: "glasses", period: "daily" as const },
@@ -45,6 +91,22 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { points, streak, addTaskPoints, fetchProfile } = useProfile();
   const { goals, fetchGoals, updateGoalProgress, deleteGoal } = useGoals();
+
+  // Shuffle tasks based on date
+  const dailyTasks = useMemo(() => {
+    const seed = getDateSeed("daily");
+    return seededShuffle(allDailyTasks, seed).slice(0, 4).map(t => ({ ...t, type: "daily" as const }));
+  }, []);
+
+  const weeklyTasks = useMemo(() => {
+    const seed = getDateSeed("weekly");
+    return seededShuffle(allWeeklyTasks, seed).slice(0, 3).map(t => ({ ...t, type: "weekly" as const }));
+  }, []);
+
+  const monthlyTasks = useMemo(() => {
+    const seed = getDateSeed("monthly");
+    return seededShuffle(allMonthlyTasks, seed).slice(0, 3).map(t => ({ ...t, type: "monthly" as const }));
+  }, []);
 
   const toggleTask = async (taskId: number, taskType: "daily" | "weekly" | "monthly") => {
     if (!user) {

@@ -146,6 +146,18 @@ export function KitchenSearch() {
                   ol: ({ children }) => <ol className="list-decimal pl-4 text-primary-foreground/90 space-y-1">{children}</ol>,
                   li: ({ children }) => <li className="text-primary-foreground/90">{children}</li>,
                   strong: ({ children }) => <strong className="font-semibold text-primary-foreground">{children}</strong>,
+                  img: ({ src, alt }) => (
+                    <div className="my-4 rounded-xl overflow-hidden">
+                      <img 
+                        src={src} 
+                        alt={alt || "Recipe image"} 
+                        className="w-full h-48 object-cover rounded-xl"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ),
                 }}
               >
                 {recipe.content}
