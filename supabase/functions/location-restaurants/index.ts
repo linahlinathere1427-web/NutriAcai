@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, address, bbox } = await req.json();
+    const { action, address, bbox, lat, lon } = await req.json();
     
     const MAP_API_KEY = Deno.env.get("MAP_API_KEY");
     if (!MAP_API_KEY) {
@@ -31,6 +31,26 @@ serve(async (req) => {
       
       const data = await response.json();
       console.log("[LOCATION] Geocoding result:", data.features?.length, "results");
+      
+      return new Response(JSON.stringify({ location: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    if (action === "reverse_geocode") {
+      // Reverse geocode coordinates to get address
+      console.log("[LOCATION] Reverse geocoding:", lat, lon);
+      
+      const reverseUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${MAP_API_KEY}`;
+      const response = await fetch(reverseUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Reverse geocoding failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("[LOCATION] Reverse geocoding result:", data.features?.length, "results");
       
       return new Response(JSON.stringify({ location: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,7 +79,7 @@ serve(async (req) => {
       });
     }
 
-    throw new Error("Invalid action. Use 'geocode' or 'restaurants'");
+    throw new Error("Invalid action. Use 'geocode', 'reverse_geocode', or 'restaurants'");
   } catch (error) {
     console.error("[LOCATION] Error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
