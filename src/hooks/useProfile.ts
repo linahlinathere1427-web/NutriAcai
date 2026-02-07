@@ -15,8 +15,8 @@ interface Profile {
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const streakUpdatedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
+  const streakUpdatedRef = useRef(false);
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
