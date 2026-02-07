@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -15,6 +15,7 @@ interface Profile {
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const streakUpdatedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = useCallback(async () => {
@@ -67,10 +68,12 @@ export function useProfile() {
 
       if (error) throw error;
       
-      // Update local state
-      setProfile((prev) => prev ? { ...prev, points: data.points } : null);
+      // Update local state immediately
+      if (data?.points !== undefined) {
+        setProfile((prev) => prev ? { ...prev, points: data.points } : null);
+      }
       
-      return data.points;
+      return data?.points;
     } catch (error) {
       console.error("Error adding points:", error);
     }
@@ -99,12 +102,13 @@ export function useProfile() {
     fetchProfile();
   }, [fetchProfile]);
 
-  // Update streak on initial load
+  // Update streak on initial load (only once)
   useEffect(() => {
-    if (user && profile) {
+    if (user && profile && !streakUpdatedRef.current) {
+      streakUpdatedRef.current = true;
       updateStreak();
     }
-  }, [user]);
+  }, [user, profile, updateStreak]);
 
   return {
     profile,
