@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,28 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data, error: authError } = await supabaseClient.auth.getClaims(token);
+    if (authError || !data?.claims) {
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const { action, address, bbox, lat, lon } = body;
 
@@ -29,14 +52,13 @@ serve(async (req) => {
     }
 
     if (action === "geocode") {
-      // Validate address
       if (!address || typeof address !== "string" || address.trim().length === 0 || address.length > 300) {
         return new Response(JSON.stringify({ error: "Invalid address: must be a non-empty string under 300 characters" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      console.log("[LOCATION] Geocoding address:", address.substring(0, 50));
+      console.log("[LOCATION] Geocoding for user:", data.claims.sub);
       
       const geocodeUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&apiKey=${MAP_API_KEY}`;
       const response = await fetch(geocodeUrl);
@@ -45,17 +67,15 @@ serve(async (req) => {
         throw new Error(`Geocoding failed: ${response.status}`);
       }
       
-      const data = await response.json();
-      console.log("[LOCATION] Geocoding result:", data.features?.length, "results");
+      const responseData = await response.json();
       
-      return new Response(JSON.stringify({ location: data }), {
+      return new Response(JSON.stringify({ location: responseData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
     if (action === "reverse_geocode") {
-      // Validate lat/lon
       const latNum = Number(lat);
       const lonNum = Number(lon);
       if (isNaN(latNum) || isNaN(lonNum) || latNum < -90 || latNum > 90 || lonNum < -180 || lonNum > 180) {
@@ -64,7 +84,7 @@ serve(async (req) => {
         });
       }
 
-      console.log("[LOCATION] Reverse geocoding:", latNum, lonNum);
+      console.log("[LOCATION] Reverse geocoding for user:", data.claims.sub);
       
       const reverseUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${latNum}&lon=${lonNum}&apiKey=${MAP_API_KEY}`;
       const response = await fetch(reverseUrl);
@@ -73,17 +93,15 @@ serve(async (req) => {
         throw new Error(`Reverse geocoding failed: ${response.status}`);
       }
       
-      const data = await response.json();
-      console.log("[LOCATION] Reverse geocoding result:", data.features?.length, "results");
+      const responseData = await response.json();
       
-      return new Response(JSON.stringify({ location: data }), {
+      return new Response(JSON.stringify({ location: responseData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
     
     if (action === "restaurants") {
-      // Validate bbox format: "lon1,lat1,lon2,lat2"
       if (!bbox || typeof bbox !== "string") {
         return new Response(JSON.stringify({ error: "Invalid bbox parameter" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -96,7 +114,7 @@ serve(async (req) => {
         });
       }
 
-      console.log("[LOCATION] Finding restaurants in bbox");
+      console.log("[LOCATION] Finding restaurants for user:", data.claims.sub);
       
       const placesUrl = `https://api.geoapify.com/v2/places?categories=catering.restaurant,catering.fast_food,catering.cafe&filter=rect:${bbox}&limit=20&apiKey=${MAP_API_KEY}`;
       const response = await fetch(placesUrl);
@@ -105,10 +123,9 @@ serve(async (req) => {
         throw new Error(`Places search failed: ${response.status}`);
       }
       
-      const data = await response.json();
-      console.log("[LOCATION] Found", data.features?.length, "restaurants");
+      const responseData = await response.json();
       
-      return new Response(JSON.stringify({ restaurants: data }), {
+      return new Response(JSON.stringify({ restaurants: responseData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
