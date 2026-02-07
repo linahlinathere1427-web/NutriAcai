@@ -19,6 +19,7 @@ import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Checkout from "./pages/Checkout";
 import FAQ from "./pages/FAQ";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/faq" element={<FAQ />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

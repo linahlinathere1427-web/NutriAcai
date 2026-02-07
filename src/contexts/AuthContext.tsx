@@ -35,6 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else if (event === "SIGNED_OUT") {
           navigate("/");
+        } else if (event === "PASSWORD_RECOVERY") {
+          setTimeout(() => {
+            navigate("/reset-password");
+          }, 0);
         }
       }
     );
