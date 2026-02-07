@@ -5,20 +5,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const VALID_ACTIONS = ["generate", "search"];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { ingredients, action } = await req.json();
+    const body = await req.json();
+    const { ingredients, action } = body;
+
+    // Validate ingredients
+    if (!ingredients || typeof ingredients !== "string" || ingredients.trim().length === 0 || ingredients.length > 500) {
+      return new Response(JSON.stringify({ error: "Invalid ingredients: must be a non-empty string under 500 characters" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate action
+    if (action && !VALID_ACTIONS.includes(action)) {
+      return new Response(JSON.stringify({ error: "Invalid action. Use 'generate' or 'search'" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("[RECIPE-AGENT] Generating recipe for:", ingredients);
+    console.log("[RECIPE-AGENT] Generating recipe for ingredients");
 
     const systemPrompt = `You are NutriAcai's Recipe Agent - an expert culinary AI that creates healthy, delicious recipes based on available ingredients.
 
@@ -95,8 +112,7 @@ Format your response in clear markdown with headers for each section. Always inc
     });
   } catch (error) {
     console.error("[RECIPE-AGENT] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "An internal error occurred. Please try again." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

@@ -11,7 +11,34 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
+    const { messages } = body;
+
+    // Validate messages input
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid messages: must be a non-empty array with at most 50 items" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    for (const msg of messages) {
+      if (!msg || typeof msg !== "object") {
+        return new Response(JSON.stringify({ error: "Invalid message format" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!msg.role || typeof msg.role !== "string" || !["user", "assistant", "system"].includes(msg.role)) {
+        return new Response(JSON.stringify({ error: "Invalid message role" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!msg.content || typeof msg.content !== "string" || msg.content.length > 5000) {
+        return new Response(JSON.stringify({ error: "Invalid message content: must be a string under 5000 characters" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -80,8 +107,7 @@ Remember: You're helping users on their wellness journey, celebrating their prog
     });
   } catch (error) {
     console.error("[HEALTH-AGENT] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "An internal error occurred. Please try again." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
