@@ -130,6 +130,7 @@ Rules:
             { role: "system", content: systemPrompt },
             ...messages,
           ],
+          stream: true,
         }),
       }
     );
@@ -139,30 +140,23 @@ Rules:
 
       console.error("AI Error:", err);
 
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: "AI service failed" }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const result = await aiResponse.json();
-
-    // ---------------- RESPONSE ----------------
-    return new Response(
-      JSON.stringify(result),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Stream the response directly to the client
+    return new Response(aiResponse.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
 
   } catch (err) {
     console.error("[HEALTH-AGENT]", err);
